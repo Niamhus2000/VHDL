@@ -1,0 +1,173 @@
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+
+ENTITY Lab2_part1 IS
+PORT (reset: IN STD_LOGIC;
+      clk: IN STD_LOGIC;
+        enable: IN STD_LOGIC;
+      HEX0,HEX1,HEX2,HEX3 : OUT STD_LOGIC_VECTOR(0 to 6));
+END lab2_part1;
+
+ARCHITECTURE beh OF Lab2_part1 IS
+
+
+component counter IS
+PORT ( reset: IN STD_LOGIC;
+        clk: IN STD_LOGIC;
+          enable: IN STD_LOGIC;
+        Q: OUT STD_LOGIC_VECTOR (15 DOWNTO 0));
+end component;
+
+component decoder7 IS
+PORT ( c : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+        Display : OUT STD_LOGIC_VECTOR(0 TO 6));
+end component ;
+
+signal Q_int :std_logic_vector (15 DOWNTO 0);
+BEGIN --beh
+count0: counter PORT MAP (reset, clk, enable, Q_int);
+H0: decoder7 PORT MAP (Q_int(3 downto 0), HEX0);
+H1: decoder7 PORT MAP (Q_int(7 downto 4), HEX1);
+H2: decoder7 PORT MAP (Q_int(11 downto 8), HEX2);
+H3: decoder7 PORT MAP (Q_int(15 downto 12), HEX3);
+END beh;
+
+
+COUNTER ------------------------------
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.numeric_std.all;
+USE ieee.std_logic_arith.all;
+USE ieee.std_logic_unsigned.all;
+
+ENTITY counter IS
+PORT ( reset: IN STD_LOGIC;
+        clk: IN STD_LOGIC;
+          enable: IN STD_LOGIC;
+          Q: OUT STD_LOGIC_VECTOR (15 DOWNTO 0));
+END counter;
+
+ARCHITECTURE beh of counter is
+SIGNAL Q_int: STD_LOGIC_VECTOR (15 DOWNTO 0);
+
+BEGIN
+    process (reset, clk, enable)
+    begin --process
+   
+    if enable = '1' then
+        if reset = '0' then
+            Q_int <= "0000000000000000";
+        elsif clk'event and clk = '1' then -- rising clock edge
+            Q_int <= Q_int + '1';
+        end if;
+    else
+        Q_int <= "0000000000000000";
+    end if;
+   
+    END process;
+    Q <= Q_int;
+END beh;
+
+DECODER --------------------------------------------------------------------------
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+
+ENTITY decoder7 IS
+ PORT ( c : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+Display : OUT STD_LOGIC_VECTOR(0 TO 6));
+END decoder7;
+
+ARCHITECTURE Behavior OF decoder7 IS
+BEGIN -- beh
+ --LED lit when 0
+process (c)
+    begin --process
+    if c = "0000" then --0
+    Display <= "0000001";
+    elsif c = "0001" then --1
+    Display <= "1001111";
+    elsif  c = "0010" then --2
+    Display <= "0010010";
+    elsif c = "0011" then --3
+    Display <= "0000110";
+    elsif c = "0100" then -- 4
+    Display <= "1001101";
+    elsif c = "0101" then -- 5
+    Display <= "0100100";
+    elsif c = "0110" then --6
+    Display <= "0100000";
+    elsif c = "0111" then --7
+    Display <= "0001111";
+    elsif c = "1000" then
+    Display <= "0000000";
+    elsif c = "1001" then --9
+    Display <= "0000100";
+    elsif c = "1010" then -- A
+    Display <= "0001000";
+    elsif c = "1011" then -- b
+    Display <= "1100001";
+    elsif c = "1100" then -- c
+    Display <= "0110001";
+    elsif c = "1101" then -- d
+    Display <= "1000010";
+    elsif c = "1110" then -- E
+    Display <= "0110000";
+    elsif c = "1111" then -- F
+    Display <= "0111000";
+    else Display <= "1111111"; --blank
+    end if;
+end process;
+END Behavior;
+
+TESTBENCH
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+USE ieee.numeric_std.all;
+USE ieee.std_logic_arith.all;
+USE ieee.std_logic_unsigned.all;
+
+entity Lab2_part1_tb is
+end Lab2_part1_tb;
+
+architecture beh of Lab2_part1_tb is
+
+signal reset_int,clk_int, enable_int: std_logic;
+signal HEX0_tb,HEX1_tb,HEX2_tb,HEX3_tb : STD_LOGIC_VECTOR(0 to 6);
+
+component Lab2_part1
+    Port ( reset: in std_logic;
+           clk: in std_logic;
+       enable: in std_logic;
+           HEX0,HEX1,HEX2,HEX3 : OUT STD_LOGIC_VECTOR(0 to 6)
+     );
+end component;
+
+begin --beh
+uut: Lab2_part1 port map (reset =>reset_int, clk => clk_int, enable => enable_int,
+        HEX0 => HEX0_tb, HEX1 => HEX1_tb, HEX2 => HEX2_tb, HEX3 => HEX3_tb );
+
+clock_process :process
+begin
+     clk_int <= '0';
+     wait for 10 ns;
+     clk_int <= '1';
+     wait for 10 ns;
+end process;
+
+stim_proc: process
+begin       
+    reset_int <= '0';
+   wait for 20 ns;   
+    reset_int <= '1';
+   wait;
+end process;
+
+process
+begin --process
+    enable_int <= '1';
+    wait for 600ns;
+    enable_int <= '0';
+    wait for 200ns;
+    enable_int <= '1';
+end process;
+end beh;
