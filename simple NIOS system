@@ -1,0 +1,196 @@
+LIBRARY ieee; 
+USE ieee.std_logic_1164.all;
+
+ENTITY LAB4 IS 
+PORT (
+  CLOCK_50: IN STD_LOGIC; 
+  KEY: IN STD_LOGIC_VECTOR (3 DOWNTO 0);
+  SW: IN STD_LOGIC_VECTOR (7 DOWNTO 0); 
+  HEX0: OUT STD_LOGIC_VECTOR (6 DOWNTO 0);
+  HEX1: OUT STD_LOGIC_VECTOR (6 DOWNTO 0); 
+  LEDR: OUT STD_LOGIC_VECTOR (7 DOWNTO 0)
+  ); 
+END LAB4;
+
+ARCHITECTURE beh of LAB4 IS 
+COMPONENT lab4_system 
+  PORT (
+    clk_clk: IN STD_LOGIC; 
+    reset_reset_n : IN STD_LOGIC; 
+    key_export: IN std_logic_vector(3 downto 0);
+    sw_export : IN STD_LOGIC_VECTOR (7 DOWNTO 0); 
+    hex0_export: OUT STD_LOGIC_VECTOR (6 DOWNTO 0);
+    hex1_export: OUT STD_LOGIC_VECTOR (6 DOWNTO 0); 
+    ledr_export : OUT STD_LOGIC_VECTOR (7 DOWNTO 0) 
+    );
+  END COMPONENT;
+  
+  COMPONENT decoder7 
+  PORT ( 
+  c : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+  Display : OUT STD_LOGIC_VECTOR(0 TO 6) 
+  ); 
+  END COMPONENT;
+  
+  BEGIN 
+  NiosII : lab4_system 
+  PORT MAP( 
+    clk_clk => CLOCK_50, 
+    reset_reset_n => KEY(2), 
+    key_export => key(3 DOWNTO 0), 
+    sw_export => SW(7 DOWNTO 0), 
+    hex0_export => HEX0 (6 DOWNTO 0), 
+    hex1_export => HEX1 (6 DOWNTO 0), 
+    ledr_export => LEDR(7 DOWNTO 0) 
+    ); 
+  END beh;
+  
+  --------------------------------------------------------
+  PART 1
+  //program to connect switches to LEDS 
+  #include "system.h" 
+  #include "sys/alt_stdio.h" 
+  #include "altera_avalon_pio_regs.h" 
+  int main () 
+  { 
+    int flag = 0; //initialize value 
+    alt_putstr("Led and switch test\n"); 
+    while (1) 
+    { 
+      //put into flag what is at switches 
+      flag = IORD_ALTERA_AVALON_PIO_DATA(SW_BASE); 
+      //LEDs = flag 
+      IOWR_ALTERA_AVALON_PIO_DATA(LEDR_BASE, flag & 0xff); 
+      }
+   }
+   
+   ------------------------------------------------------------
+   PART 2
+   //program to represent switches in HEX representation 
+   #include "system.h" 
+   #include "sys/alt_stdio.h" 
+   #include "altera_avalon_pio_regs.h" 
+   
+   int decoder (int flag);
+   //function to convert switches to HEX display 
+   int main() 
+   { 
+      int flag, Display; 
+      flag = Display = 0; 
+      //initialize values 
+      alt_putstr("HEX test \n"); 
+      while (1) 
+     { 
+     //put into flag what is at switches 
+     flag = IORD_ALTERA_AVALON_PIO_DATA(SW_BASE); 
+     Display = decoder(flag); 
+     //HEX0 = Display 
+     IOWR_ALTERA_AVALON_PIO_DATA(HEX0_BASE, Display); 
+     } 
+     return 0;
+ }
+ 
+ int decoder(int flag) 
+ { 
+    int Display; 
+    switch (flag)
+    { 
+      //0b means binary int
+      case 0b00000000: Display = 0b0000001; break; //0 
+      case 0b00000001: Display = 0b1001111; break; //1 
+      case 0b00000010: Display = 0b0010010; break; //2 
+      case 0b00000011: Display = 0b0000110; break; //3 
+      case 0b00000100: Display = 0b1001100; break; //4 
+      case 0b00000101: Display = 0b0100100; break; //5 
+      case 0b00000110: Display = 0b0100000; break; //6 
+      case 0b00000111: Display = 0b0001111; break; //7 
+      case 0b00001000: Display = 0b0000000; break; //8 
+      case 0b00001001: Display = 0b0000100; break; //9 
+      case 0b00001010: Display = 0b0001000; break; //A 
+      case 0b00001011: Display = 0b1100000; break; //b 
+      case 0b00001100: Display = 0b0110001; break; //c 
+      case 0b00001101: Display = 0b1000010; break; //d 
+      case 0b00001110: Display = 0b0110000; break; //E 
+      case 0b00001111: Display = 0b0111000; break; //F 
+      default: Display = 0b1111111; break; //blank
+      } 
+      return Display;
+   }
+   
+   -----------------------------------------------------------------
+   PART 3
+   
+   
+   //program to count the rising edge of pushbutton 
+   #include "system.h" 
+   #include "sys/alt_stdio.h" 
+   #include "altera_avalon_pio_regs.h"
+    
+   int decoder (int flag); 
+   int main() 
+   {
+      alt_putstr("Pushbutton test \n");
+      int counter, Display1, Display2, flag; 
+      counter = Display1 = Display2 = flag = 0; 
+      //initialize values 
+      //256 in HEX is 0x100 
+      //255 in HEX is 0xFF 
+      while (1)
+      { 
+      ////put into flag what is at KEYs 
+      flag = IORD_ALTERA_AVALON_PIO_DATA(KEY_BASE);
+      //pushbuttons are active low 
+      //while no buttons are being pressed the value is 1111 representing all 4 buttons
+      while (flag == 15) //1111 = 15
+      { 
+        //counts rising edge of pushbutton 
+        flag = IORD_ALTERA_AVALON_PIO_DATA(KEY_BASE); 
+        if (flag == 13) //1101 = 13, key1 is pressed 
+            counter++; 
+        //reset 
+        if (flag ==11) //1011 = 11, key2 is pressed
+            counter = 0; 
+      } 
+        if (counter == 256) //max value is 256 
+          counter = 0;
+          
+      //implementing display of counter
+      //units is the remainder after counter is divided by 16
+      Display1 = decoder(counter%16); 
+      Display2 = decoder(counter/16);
+      
+      //HEX0 = Display1, HEX1 = Display2 
+      IOWR_ALTERA_AVALON_PIO_DATA(HEX0_BASE, Display1); 
+      IOWR_ALTERA_AVALON_PIO_DATA(HEX1_BASE, Display2); 
+       }
+  return 0; 
+  }
+  
+  int decoder(int flag) 
+  { 
+      int Display; 
+      switch (flag) 
+      { 
+          ////0b means binary int
+          case 0b00000000: Display = 0b0000001; break; //0
+          case 0b00000001: Display = 0b1001111; break; //1
+          case 0b00000010: Display = 0b0010010; break; //2
+          case 0b00000011: Display = 0b0000110; break; //3
+          case 0b00000100: Display = 0b1001100; break; //4
+          case 0b00000101: Display = 0b0100100; break; //5
+          case 0b00000110: Display = 0b0100000; break; //6
+          case 0b00000111: Display = 0b0001111; break; //7
+          case 0b00001000: Display = 0b0000000; break; //8
+          case 0b00001001: Display = 0b0000100; break; //9
+          case 0b00001010: Display = 0b0001000; break; //A
+          case 0b00001011: Display = 0b1100000; break; //b
+          case 0b00001100: Display = 0b0110001; break; //c
+          case 0b00001101: Display = 0b1000010; break; //d
+          case 0b00001110: Display = 0b0110000; break; //E
+          case 0b00001111: Display = 0b0111000; break; //F
+          default: Display = 0b1111111; break; //blank 
+      } 
+      return Display; 
+  }
+  
+  
